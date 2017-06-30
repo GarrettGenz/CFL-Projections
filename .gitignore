@@ -101,6 +101,8 @@ ENV/
 .mypy_cache/
 
 # PyCharm
+.idea/
+.DS_STORE
 
 # Secrets
 config.py
