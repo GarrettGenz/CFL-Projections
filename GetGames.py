@@ -53,9 +53,7 @@ games_endpoint = '/v1/games/'
 games_year = datetime.datetime.now().year
 
 
-params = {  'key' : config.auth,
-            'page[number]' : 1,
-            'page[size]' : 20
+params = {  'key' : config.auth
 }
 
 while games_year >= config.start_year:
@@ -63,7 +61,7 @@ while games_year >= config.start_year:
         games = make_request(games_endpoint + str(games_year), params)
 
         if len(games) > 0:
-            print 'Season ' + str(games_year) + ': Grabbing ' + str(len(games)) + ' games from page ' + str(params['page[number]'])
+            print 'Season ' + str(games_year) + ': Grabbing ' + str(len(games)) + ' games'
 
             # Save data to database
             get_games(games)
