@@ -3,6 +3,7 @@ import config
 import json
 import time
 import psycopg2
+import datetime
 
 url = 'http://api.cfl.ca'
 
@@ -30,14 +31,17 @@ def make_request(endpoint, params):
 def get_players(players):
     for player in players:
         if player['position']['position_id'] in position_ids:
+            if player['birth_date'] == '':
+                player['birth_date'] = datetime.date(1990, 01, 01)
             conn = psycopg2.connect(host=config.endpoint, database=config.database, user=config.user, password=config.password)
             cur = conn.cursor()
             cur.execute("""INSERT INTO players("cfl_central_id", "stats_inc_id", "first_name",
                         "middle_name", "last_name", "birth_date", "position_id", "position_abbreviation") SELECT %s, %s,
-                        %s, %s, %s, %s, %s, %s""",
+                        %s, %s, %s, %s, %s, %s
+                        WHERE NOT EXISTS(SELECT * FROM players WHERE cfl_central_id = %s)""",
                         ((str(player['cfl_central_id']), str(player['stats_inc_id']), player['first_name'],
                           player['middle_name'], player['last_name'], player['birth_date'], str(player['position']['position_id']),
-                          player['position']['abbreviation']
+                          player['position']['abbreviation'], str(player['cfl_central_id'])
                           )))
   #          if player['team']['is_set']:
   #              print player[
