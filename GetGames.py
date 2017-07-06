@@ -30,7 +30,7 @@ def make_request(endpoint, params):
 # Save player data into database
 def get_games(games):
     for game in games:
-        if game['event_status']['name'] == 'Final' and game['event_type']['event_type_id'] <> 0: # Preseason
+        if game['event_type']['event_type_id'] <> 0: # Preseason
             if game['team_1']['is_at_home']:
                 home_team = game['team_1']['team_id']
                 away_team = game['team_2']['team_id']
@@ -40,10 +40,11 @@ def get_games(games):
             conn = psycopg2.connect(host=config.endpoint, database=config.database, user=config.user, password=config.password)
             cur = conn.cursor()
             cur.execute("""INSERT INTO games("game_id", "date_start", "week", "season", "temperature", "home_team",
-                            "away_team", "field_conditions") SELECT %s, %s,
-                        %s, %s, %s, %s, %s, %s WHERE NOT EXISTS(SELECT * FROM games WHERE game_id = %s)""",
+                            "away_team", "field_conditions", "event_status") SELECT %s, %s,
+                        %s, %s, %s, %s, %s, %s, %s WHERE NOT EXISTS(SELECT * FROM games WHERE game_id = %s)""",
                         (str(game['game_id']), game['date_start'], game['week'], game['season'], game['weather']['temperature'],
-                         home_team, away_team, game['weather']['field_conditions'], str(game['game_id'])
+                         home_team, away_team, game['weather']['field_conditions'], game['event_status']['name'],
+                         str(game['game_id'])
                           ))
             conn.commit()
             cur.close()
