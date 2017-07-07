@@ -9,7 +9,6 @@ url = 'http://api.cfl.ca'
 conn = psycopg2.connect(host=config.endpoint, database=config.database, user=config.user, password=config.password)
 cur = conn.cursor()
 
-game_id = 2371
 game_season = 2017
 
 # Function to make request to CFL API
@@ -123,6 +122,21 @@ def get_defensive_player_stats(game_id, team_id, players):
                       )))
         conn.commit()
 
+# Save to database whether player was a starter or inactive
+def get_player_statuses(game_id, team_id, players):
+    for player in players:
+        if player['is_starter'] or player['is_inactive']:
+            cur.execute("""INSERT INTO game_player_status("game_id", "team_id", "cfl_central_id", "is_starter",
+                                    "is_inactive")
+                                    SELECT %s, %s, %s, %s, %s
+                                    WHERE NOT EXISTS(SELECT * FROM game_player_status WHERE game_id = %s AND team_id = %s
+                                    AND cfl_central_id = %s)""",
+                        ((str(game_id), str(team_id), str(player['cfl_central_id']),
+                          player['is_starter'], player['is_inactive'],
+                          str(game_id), str(team_id), str(player['cfl_central_id'])
+                          )))
+            conn.commit()
+
 # Save player stats into database
 def get_playerstats(playerstats):
     team1 = playerstats[0]['boxscore']['teams']['team_1']
@@ -144,28 +158,52 @@ def get_playerstats(playerstats):
     get_defensive_player_stats(game_id, team1_id, team1)
     get_defensive_player_stats(game_id, team2_id, team2)
 
-playerstats_endpoint = '/v1/games/' + str(game_season) + '/game/' + str(game_id)
+# Save player stats into database
+def get_roster_data(playerstats):
+    team1 = playerstats[0]['rosters']['teams']['team_1']
+    team2 = playerstats[0]['rosters']['teams']['team_2']
+    team1_id = team1['team_id']
+    team1 = team1['roster']
+    team2_id = team2['team_id']
+    team2 = team2['roster']
+    get_player_statuses(game_id, team1_id, team1)
+    get_player_statuses(game_id, team2_id, team2)
 
 params = {  'key' : config.auth,
-            'include' : 'boxscore',
+            'include' : 'boxscore,rosters',
 }
 
-# Get list of games in season
-# Loop through each game and run call
-# Keep going until I hit config.start_year
-# Update GetGames to get games that are in the future
+while game_season >= config.start_year:
 
-# Make request
-playerstats = make_request(playerstats_endpoint, params)
+    # Get list of games in season
+    cur.execute("""SELECT game_id FROM games WHERE event_status = 'Final'
+                    AND game_id NOT IN (SELECT game_id FROM defensive_player_stats)
+                    AND season = %s""", ((str(game_season),)))
 
-if len(playerstats) > 0:
+    games = cur.fetchall()
 
-    print 'Grabbing data for game ' + str(game_id) + ' in season ' + str(game_season)
-    # Save data to database
-    get_playerstats(playerstats)
+    for game in games:
+        game_id = game[0]
 
-    # Don't want to call API more than 30 times/sec
-    time.sleep(5)
+        # Build the new endpoint
+        playerstats_endpoint = '/v1/games/' + str(game_season) + '/game/' + str(game_id)
+
+        # Make request
+        playerstats = make_request(playerstats_endpoint, params)
+
+        if len(playerstats) > 0:
+            print 'Grabbing boxscore data for game ' + str(game_id) + ' in season ' + str(game_season)
+            # Save data to database
+            get_playerstats(playerstats)
+
+            print 'Grabbing roster data for game ' + str(game_id) + ' in season ' + str(game_season)
+            # Save data to database
+            get_roster_data(playerstats)
+
+        # Don't want to call API more than 30 times/sec
+        time.sleep(5)
+
+    game_season -= 1
 
 cur.close()
 conn.close()
