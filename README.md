@@ -8,8 +8,8 @@ These projections are compared to DraftKings salaries to determine an optimal li
 
 
 ## Key files
-GetGames - Grabs all games for the years specified
-GetPlayers - Grabs all players (current and past)
-GetTeams - Grabs all teams
-GetPlayerStats - Grabs player boxscore stats for each completed game
+GetGames - Grabs all games for the years specified <br />
+GetPlayers - Grabs all players (current and past) <br />
+GetTeams - Grabs all teams <br />
+GetPlayerStats - Grabs player boxscore stats for each completed game <br />
 UpdateGames - Determines games that are recently completed and updates them in the database
