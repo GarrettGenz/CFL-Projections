@@ -12,4 +12,15 @@ GetGames - Grabs all games for the years specified <br />
 GetPlayers - Grabs all players (current and past) <br />
 GetTeams - Grabs all teams <br />
 GetPlayerStats - Grabs player boxscore stats for each completed game <br />
-UpdateGames - Determines games that are recently completed and updates them in the database
+UpdateGames - Determines games that are recently completed and updates them in the database <br />
+
+### TODO
+Calculate average defensive stats per team <br />
+Calculate average defensive stats leaguewide <br />
+Use the above to numbers to create a coefficient for each offensive category <br />
+Use the coefficient to adjust offensive stats for each player <br />
+<br />
+Create table to enter Draftkings salaries <br />
+Create process for entering Draftkings salaries into table <br />
+<br />
+Create process for entering starters for future games
