@@ -9,7 +9,7 @@ url = 'http://api.cfl.ca'
 conn = psycopg2.connect(host=config.endpoint, database=config.database, user=config.user, password=config.password)
 cur = conn.cursor()
 
-game_season = 2017
+game_season = config.current_year
 
 # Function to make request to CFL API
 def make_request(endpoint, params):

@@ -51,7 +51,7 @@ def get_games(games):
             conn.close()
 
 games_endpoint = '/v1/games/'
-games_year = datetime.datetime.now().year
+games_year = config.current_year
 
 
 params = {  'key' : config.auth
