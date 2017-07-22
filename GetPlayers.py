@@ -7,6 +7,13 @@ import datetime
 
 url = 'http://api.cfl.ca'
 
+position_ids = [1, # Quarterback
+                    2, # Running back
+                    3, # Full back
+                    4, # Slot back
+                    8, # Wide Receiver
+                    9] # Receiver/Kick returner
+
 # Function to make request to CFL API
 def make_request(endpoint, params):
     try:
@@ -51,44 +58,44 @@ def get_players(players):
             cur.close()
             conn.close()
 
-player_endpoint = '/v1/players'
+def main():
+    player_endpoint = '/v1/players'
 
-params = {  'key' : config.auth,
-            'include' : 'current_team',
-            'filter[position_id][lt]' : '10',
-            'sort' : '-rookie_year',
-            'page[number]' : 1,
-            'page[size]' : 100
-}
+    params = {  'key' : config.auth,
+                'include' : 'current_team',
+                'filter[position_id][lt]' : '10',
+                'sort' : 'last_name',
+                'page[number]' : 1,
+                'page[size]' : 20
+    }
 
-position_ids = [1, # Quarterback
-                2, # Running back
-                3, # Full back
-                4, # Slot back
-                8, # Wide Receiver
-                9] # Receiver/Kick returner
+    last_page = False
+    retry_count = 0
 
-last_page = False
+    while not last_page:
 
-while not last_page:
+        # Make request
+        players = make_request(player_endpoint, params)
 
-    # Make request
-    players = make_request(player_endpoint, params)
+        if len(players) > 0:
 
-    if len(players) > 0:
+            print 'Grabbing ' + str(len(players)) + ' players from page ' + str(params['page[number]'])
+            # Save data to database
+            get_players(players)
 
-        print 'Grabbing ' + str(len(players)) + ' players from page ' + str(params['page[number]'])
-        # Save data to database
-        get_players(players)
+            # Don't want to call API more than 30 times/sec
+            time.sleep(5)
 
-        # Don't want to call API more than 30 times/sec
-        time.sleep(5)
+            # Make request for the next page
+            params['page[number]'] += 1
 
-        # Make request for the next page
-        params['page[number]'] += 1
+        # If 0 players are returned, exit the loop
+        elif retry_count > 2:
+            last_page = True
 
-    # If 0 players are returned, exit the loop
-    else:
-        last_page = True
+        else:
+            retry_count += 1
+
+
 
 

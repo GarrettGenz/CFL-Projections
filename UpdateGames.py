@@ -52,22 +52,23 @@ def update_games(games):
     cur.close()
     conn.close()
 
-games_endpoint = '/v1/games/'
-games_year = config.current_year
+def main():
+    games_endpoint = '/v1/games/'
+    games_year = config.current_year
 
 
-params = {  'key' : config.auth
-}
+    params = {  'key' : config.auth
+    }
 
-# Make request
-games = make_request(games_endpoint + str(games_year), params)
+    # Make request
+    games = make_request(games_endpoint + str(games_year), params)
 
-if len(games) > 0:
-    print 'Season ' + str(games_year) + ': Grabbing ' + str(len(games)) + ' games'
+    if len(games) > 0:
+        print 'Season ' + str(games_year) + ': Grabbing ' + str(len(games)) + ' games'
 
-    # Update game statuses in database
-    update_games(games)
+        # Update game statuses in database
+        update_games(games)
 
-    # Don't want to call API more than 30 times/sec
-    time.sleep(5)
+        # Don't want to call API more than 30 times/sec
+        time.sleep(5)
 

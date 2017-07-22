@@ -9,8 +9,6 @@ url = 'http://api.cfl.ca'
 conn = psycopg2.connect(host=config.endpoint, database=config.database, user=config.user, password=config.password)
 cur = conn.cursor()
 
-game_season = config.current_year
-
 # Function to make request to CFL API
 def make_request(endpoint, params):
     try:
@@ -138,7 +136,7 @@ def get_player_statuses(game_id, team_id, players):
             conn.commit()
 
 # Save player stats into database
-def get_playerstats(playerstats):
+def get_playerstats(game_id, playerstats):
     team1 = playerstats[0]['boxscore']['teams']['team_1']
     team2 = playerstats[0]['boxscore']['teams']['team_2']
     team1_id = team1['team_id']
@@ -159,7 +157,7 @@ def get_playerstats(playerstats):
     get_defensive_player_stats(game_id, team2_id, team2)
 
 # Save player stats into database
-def get_roster_data(playerstats):
+def get_roster_data(game_id, playerstats):
     team1 = playerstats[0]['rosters']['teams']['team_1']
     team2 = playerstats[0]['rosters']['teams']['team_2']
     team1_id = team1['team_id']
@@ -169,41 +167,44 @@ def get_roster_data(playerstats):
     get_player_statuses(game_id, team1_id, team1)
     get_player_statuses(game_id, team2_id, team2)
 
-params = {  'key' : config.auth,
-            'include' : 'boxscore,rosters',
-}
+def main():
+    params = {  'key' : config.auth,
+                'include' : 'boxscore,rosters',
+    }
 
-while game_season >= config.start_year:
+    game_season = config.current_year
 
-    # Get list of games in season
-    cur.execute("""SELECT game_id FROM games WHERE event_status = 'Final'
-                    AND game_id NOT IN (SELECT game_id FROM defensive_player_stats)
-                    AND season = %s""", ((str(game_season),)))
+    while game_season >= config.start_year:
 
-    games = cur.fetchall()
+        # Get list of games in season
+        cur.execute("""SELECT game_id FROM games WHERE event_status = 'Final'
+                        AND game_id NOT IN (SELECT game_id FROM defensive_player_stats)
+                        AND season = %s""", ((str(game_season),)))
 
-    for game in games:
-        game_id = game[0]
+        games = cur.fetchall()
 
-        # Build the new endpoint
-        playerstats_endpoint = '/v1/games/' + str(game_season) + '/game/' + str(game_id)
+        for game in games:
+            game_id = game[0]
 
-        # Make request
-        playerstats = make_request(playerstats_endpoint, params)
+            # Build the new endpoint
+            playerstats_endpoint = '/v1/games/' + str(game_season) + '/game/' + str(game_id)
 
-        if len(playerstats) > 0:
-            print 'Grabbing boxscore data for game ' + str(game_id) + ' in season ' + str(game_season)
-            # Save data to database
-            get_playerstats(playerstats)
+            # Make request
+            playerstats = make_request(playerstats_endpoint, params)
 
-            print 'Grabbing roster data for game ' + str(game_id) + ' in season ' + str(game_season)
-            # Save data to database
-            get_roster_data(playerstats)
+            if len(playerstats) > 0:
+                print 'Grabbing boxscore data for game ' + str(game_id) + ' in season ' + str(game_season)
+                # Save data to database
+                get_playerstats(game_id, playerstats)
 
-        # Don't want to call API more than 30 times/sec
-        time.sleep(5)
+                print 'Grabbing roster data for game ' + str(game_id) + ' in season ' + str(game_season)
+                # Save data to database
+                get_roster_data(game_id, playerstats)
 
-    game_season -= 1
+            # Don't want to call API more than 30 times/sec
+            time.sleep(5)
 
-cur.close()
-conn.close()
+        game_season -= 1
+
+    cur.close()
+    conn.close()

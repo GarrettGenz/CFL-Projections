@@ -30,7 +30,6 @@ def make_request(endpoint, params):
 # Save team data into database
 def get_teams(teams):
      for team in teams:
-        print team
         conn = psycopg2.connect(host=config.endpoint, database=config.database, user=config.user, password=config.password)
         cur = conn.cursor()
         cur.execute("""INSERT INTO teams("team_id", "abbreviation", "location", "nickname", "full_name",
@@ -43,20 +42,21 @@ def get_teams(teams):
         cur.close()
         conn.close()
 
-teams_endpoint = '/v1/teams/'
+def main():
+    teams_endpoint = '/v1/teams/'
 
-params = {  'key' : config.auth
-}
+    params = {  'key' : config.auth
+    }
 
-# Make request
-teams = make_request(teams_endpoint, params)
+    # Make request
+    teams = make_request(teams_endpoint, params)
 
-if len(teams) > 0:
-    print 'Grabbing ' + str(len(teams)) + ' teams'
+    if len(teams) > 0:
+        print 'Grabbing ' + str(len(teams)) + ' teams'
 
-    # Save data to database
-    get_teams(teams)
+        # Save data to database
+        get_teams(teams)
 
-    # Don't want to call API more than 30 times/sec
-    time.sleep(5)
+        # Don't want to call API more than 30 times/sec
+        time.sleep(5)
 
