@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import psycopg2
 import config
 from sklearn.linear_model import LassoCV
-from sklearn.preprocessing import RobustScaler
+from sklearn.preprocessing import StandardScaler
 
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import cross_val_score
@@ -17,12 +17,14 @@ def one_hot_encoding(cols, train, test):
     for col in cols:
         # Perform encoding on training data
         one_hot = pd.get_dummies(train[col], prefix=col)
-        train = train.drop(col, axis=1)
+        if col <> 'cfl_central_id':
+            train = train.drop(col, axis=1)
         train = train.join(one_hot)
 
         # Perform encoding on test data
         one_hot = pd.get_dummies(test[col], prefix=col)
-        test = test.drop(col, axis=1)
+        if col <> 'cfl_central_id':
+            test = test.drop(col, axis=1)
         test = test.join(one_hot)
 
     return train, test
@@ -47,6 +49,9 @@ def main():
     # Get test data
     test = pd.read_sql_query("""SELECT  * FROM test_data""", conn)
 
+    cur.close()
+    conn.close()
+
     # Columns used only to insert data into database. Do not train on them
     insert_data = ['game_id', 'cfl_central_id']
 
@@ -56,7 +61,8 @@ def main():
                'kick_returns_yards', 'kick_returns_touchdowns']
 
     # Columns that need to be one hot encoded
-    one_hot_encode = ['team_id', 'home_or_away', 'is_starter', 'position_abbreviation']
+    one_hot_encode = ['team_id', 'home_or_away', 'is_starter', 'position_abbreviation', 'cfl_central_id',
+                      'percent_games_cur_season', 'num_games']
 
     training['position_abbreviation'] = training['position_abbreviation'].fillna('NA')
     test['position_abbreviation'] = test['position_abbreviation'].fillna('NA')
@@ -64,6 +70,17 @@ def main():
     # Drop any rows where one hot encoded columns are null
     training = training.dropna(subset=one_hot_encode)
     test = test.dropna(subset=one_hot_encode)
+
+    print ('Set negative values to 0...')
+
+    # Set negative values to 0
+    for col in training:
+            neg_index = training[col] < 0
+            training.loc[neg_index, col] = 0
+
+    for col in test:
+            neg_index = test[col] < 0
+            test.loc[neg_index, col] = 0
 
     print ('One hot encode data...')
 
@@ -89,24 +106,37 @@ def main():
     print ('Update test NaN values to 0...')
 
     for col in test:
-        print col
-        test[col].fillna(0, inplace=True)
+        if col <> 'cfl_central_id':
+            test[col].fillna(0, inplace=True)
 
     print ('Scale data...')
     # Scale data
-    scaler = RobustScaler()
-    scaler.fit_transform(training[train_cols])
-    scaler.transform(test[train_cols])
+    scaler = StandardScaler()
+    training[train_cols] = scaler.fit_transform(training[train_cols])
+    test[train_cols] = scaler.transform(test[train_cols])
 
     # Store player projections here
     player_projs = pd.DataFrame(columns=predict_cols)
 
     col_algs = []
 
+    # cols_unskew_train = training[train_cols].columns[abs(training[train_cols].skew() > 1)]
+    # cols_unskew_target = training[targets].columns[abs(training[targets].skew() > 1)]
+
+    # print training[train_cols].skew()
+    # print training[targets].skew()
+
+    # for col in cols_unskew_train:
+    #    training[col] = np.log1p(training[col])
+    #    test[col] = np.log1p(test[col])
+
+    #for col in cols_unskew_target:
+    #  training[col] = np.log1p(training[col])
+
     ##########################
     # Check skew data
-    print training[train_cols].skew()
-    print training[targets].skew()
+    # print training[train_cols].skew()
+    # print training[targets].skew()
     ############################
 
     for target in targets:
@@ -114,32 +144,51 @@ def main():
 
         # Train model on target column
         # Save each alg as a list of [alg, col_name_to_predict]
-        #col_algs.append([LassoCV(alphas=[1, 0.1, 0.001]).fit(training[train_cols], training[target]), target])
-        col_algs.append([xgb.XGBRegressor(n_estimators=100, max_depth=5,learning_rate=0.1).fit(training[train_cols], training[target]), target])
+        #col_algs.append([LassoCV(alphas=[1, 0.1, 0.001, 0.0005]).fit(training[train_cols], training[target]), target])
+        #col_algs.append([RandomForestRegressor().fit(training[train_cols], training[target]), target])
+
+
+        # col_algs.append([xgb.XGBRegressor(n_estimators=300, max_depth=5,learning_rate=0.05).fit(training[train_cols], training[target]),
+        #                 LassoCV(alphas=[1, 0.1, 0.001, 0.0005]).fit(training[train_cols], training[target]), target])
 
         ##########################
         # rf_test = RandomForestRegressor(n_jobs=-1)
-        # params = {'max_depth': [20, 30, 40], 'n_estimators': [500], 'max_features': [20, 40, 60]}
+        # params = {'max_depth': [10, 20, 30], 'n_estimators': [100, 500, 900], 'max_features': [60, 80, 100]}
         # gsCV = GridSearchCV(estimator=rf_test, param_grid=params, cv=5, n_jobs=-1, verbose=3)
         # gsCV.fit(training[train_cols], training[target])
         # print(gsCV.best_estimator_)
         #
-        # rf_test = xgb.XGBRegressor()
-        # params = {'n_estimators': [100, 300, 500], 'max_depth': [5, 10, 15], 'learning_rate': [0.1, 0.15, 0.2]}
-        # gsCV = GridSearchCV(estimator=rf_test, param_grid=params, cv=5, n_jobs=-1, verbose=3)
-        # gsCV.fit(training[train_cols], training[target])
-        # print(gsCV.best_estimator_)
+        rf_test = xgb.XGBRegressor()
+        params = {'n_estimators': [10, 50, 150, 500], 'max_depth': [5, 10, 15], 'learning_rate': [0.001, 0.01, 0.05, 0.1]}
+        gsCV = GridSearchCV(estimator=rf_test, param_grid=params, cv=3, n_jobs=-1, verbose=3)
+        gsCV.fit(training[train_cols], training[target])
+        print(gsCV.best_estimator_)
+        print(gsCV.best_params_)
 
+        xgb_alg = xgb.XGBRegressor()
+        xgb_alg.set_params(**gsCV.best_params_)
+        # Use best params from GridSearchCV for each target
+        col_algs.append([xgb_alg.fit(training[train_cols], training[target]),
+                         LassoCV(alphas=[1, 0.1, 0.001, 0.0005]).fit(training[train_cols], training[target]), target])
+
+        #rf_test = RandomForestRegressor(max_depth=10, max_features=60, n_estimators=500)
         #rf_test = LassoCV(alphas=[1, 0.1, 0.001])
-        rf_test = xgb.XGBRegressor(n_estimators=100, max_depth=5,learning_rate=0.1)
-        cv_score = cross_val_score(rf_test, training[train_cols], training[target], cv = 5, n_jobs = -1, scoring='neg_mean_squared_error')
-        print('CV Score is: '+ str(np.mean(cv_score)))
+        #rf_test = LassoCV(alphas=[1, 0.1, 0.001])
+        ## rf_test = xgb.XGBRegressor(n_estimators=300, max_depth=5,learning_rate=0.01, colsample_bytree=1)
+        ## cv_score = cross_val_score(rf_test, training[train_cols], training[target], cv = 5, n_jobs = -1)
+        ## print('CV Score is: '+ str(np.mean(cv_score)))
         ############################
+
+    conn = psycopg2.connect(host=config.endpoint, database=config.database, user=config.user,
+                            password=config.password)
+
+    cur = conn.cursor()
 
     # Predict on each target column
     for index, row in test.iterrows():
-        for alg, col in col_algs:
-            player_projs[col] = alg.predict(test[train_cols].loc[[index]])
+        for alg1, alg2, col in col_algs:
+            #player_projs[col] = np.expm1(alg.predict(test[train_cols].loc[[index]]))
+            player_projs[col] = alg2.predict(test[train_cols].loc[[index]]) * .5 + alg2.predict(test[train_cols].loc[[index]]) * .5
             if player_projs[col].values < 0:
                 player_projs[col] = 0
 
@@ -148,6 +197,7 @@ def main():
         player_projs["cfl_central_id"] = row['cfl_central_id']
 
         print ('Inserting data for ' + str(row['cfl_central_id']))
+
         cur.execute("""DELETE FROM player_projections WHERE game_id = %s AND cfl_central_id = %s""",
                     (str(row['game_id']), str(row['cfl_central_id'])))
         conn.commit()
