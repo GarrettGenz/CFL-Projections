@@ -135,6 +135,10 @@ def get_player_statuses(game_id, team_id, players):
                           )))
             conn.commit()
 
+def delete_player_statuses():
+    cur.execute("""DELETE FROM game_player_status""")
+    conn.commit()
+
 # Save player stats into database
 def get_playerstats(game_id, playerstats):
     team1 = playerstats[0]['boxscore']['teams']['team_1']
@@ -164,6 +168,7 @@ def get_roster_data(game_id, playerstats):
     team1 = team1['roster']
     team2_id = team2['team_id']
     team2 = team2['roster']
+    delete_player_statuses()
     get_player_statuses(game_id, team1_id, team1)
     get_player_statuses(game_id, team2_id, team2)
 

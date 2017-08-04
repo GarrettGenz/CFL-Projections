@@ -8,6 +8,7 @@ import UpdateGames
 import GetPlayerStats
 import GetPlayerProjections
 import config
+import datetime
 
 
 
@@ -38,16 +39,16 @@ def beg_of_week_updates():
     cur.execute(codecs.open("PopulateDefensiveTeamStats.sql", "r", encoding='us-ascii').read())
     conn.commit()
 
-    print ('Populate table game_player_proj_status...')
+    print ('Update player actuals in offensive_player_stats...')
+    cur.execute(codecs.open("UpdatePlayerActuals.sql", "r", encoding='us-ascii').read())
+    conn.commit()
+
+    print ('Populate table player_proj_status with projected starters/injuries for current week...')
     cur.execute(codecs.open("PopulatePlayerStatusProjections.sql", "r", encoding='us-ascii').read())
     conn.commit()
 
     print ('Populate table team_training_data...')
     cur.execute(codecs.open("PopulateTeamTrainingData.sql", "r", encoding='us-ascii').read())
-    conn.commit()
-
-    print ('Update Draftkings table with game date...')
-    cur.execute(codecs.open("UpdateDraftkingsGames.sql", "r", encoding='us-ascii').read())
     conn.commit()
 
     cur.close()
@@ -65,12 +66,20 @@ def daily_updates():
     cur.execute(codecs.open("UpdatePlayerProjections.sql", "r", encoding='us-ascii').read())
     conn.commit()
 
+    print ('Update Draftkings table with game date...')
+    cur.execute(codecs.open("UpdateDraftkingsGames.sql", "r", encoding='us-ascii').read())
+    conn.commit()
+
     print ('Get optimal combinations for Draftkings...')
     cur.execute(codecs.open("GetDraftkingsCombos.sql", "r", encoding='us-ascii').read())
     conn.commit()
 
     cur.close()
     conn.close()
+
+# On Sunday run all scripts (they take longer)
+if datetime.datetime.today().weekday() == 6: # Sunday
+    beg_of_week_updates()
 
 daily_updates()
 

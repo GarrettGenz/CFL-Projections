@@ -159,7 +159,7 @@ def main():
         # print(gsCV.best_estimator_)
         #
         rf_test = xgb.XGBRegressor()
-        params = {'n_estimators': [10, 50, 150, 500], 'max_depth': [5, 10, 15], 'learning_rate': [0.001, 0.01, 0.05, 0.1]}
+        params = {'n_estimators': [10, 50, 150], 'max_depth': [5], 'learning_rate': [0.01, 0.05, 0.1]}
         gsCV = GridSearchCV(estimator=rf_test, param_grid=params, cv=3, n_jobs=-1, verbose=3)
         gsCV.fit(training[train_cols], training[target])
         print(gsCV.best_estimator_)
