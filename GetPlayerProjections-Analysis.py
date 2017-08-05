@@ -132,7 +132,7 @@ for target in targets:
     # Save each alg as a list of [alg, col_name_to_predict]
     rf_test = xgb.XGBRegressor()
     params = {'n_estimators': [10, 50, 150], 'max_depth': [5], 'learning_rate': [0.01, 0.05, 0.1]}
-    gsCV = GridSearchCV(estimator=rf_test, param_grid=params, cv=3, n_jobs=-1, verbose=3)
+    gsCV = GridSearchCV(estimator=rf_test, param_grid=params, cv=4, n_jobs=-1, verbose=3)
     gsCV.fit(training[train_cols], training[target])
     print(gsCV.best_estimator_)
     print(gsCV.best_params_)

@@ -160,7 +160,7 @@ def main():
         #
         rf_test = xgb.XGBRegressor()
         params = {'n_estimators': [10, 50, 150], 'max_depth': [5], 'learning_rate': [0.01, 0.05, 0.1]}
-        gsCV = GridSearchCV(estimator=rf_test, param_grid=params, cv=3, n_jobs=-1, verbose=3)
+        gsCV = GridSearchCV(estimator=rf_test, param_grid=params, cv=4, n_jobs=-1, verbose=3)
         gsCV.fit(training[train_cols], training[target])
         print(gsCV.best_estimator_)
         print(gsCV.best_params_)
@@ -171,14 +171,6 @@ def main():
         col_algs.append([xgb_alg.fit(training[train_cols], training[target]),
                          LassoCV(alphas=[1, 0.1, 0.001, 0.0005]).fit(training[train_cols], training[target]), target])
 
-        #rf_test = RandomForestRegressor(max_depth=10, max_features=60, n_estimators=500)
-        #rf_test = LassoCV(alphas=[1, 0.1, 0.001])
-        #rf_test = LassoCV(alphas=[1, 0.1, 0.001])
-        ## rf_test = xgb.XGBRegressor(n_estimators=300, max_depth=5,learning_rate=0.01, colsample_bytree=1)
-        ## cv_score = cross_val_score(rf_test, training[train_cols], training[target], cv = 5, n_jobs = -1)
-        ## print('CV Score is: '+ str(np.mean(cv_score)))
-        ############################
-
     conn = psycopg2.connect(host=config.endpoint, database=config.database, user=config.user,
                             password=config.password)
 
@@ -188,7 +180,7 @@ def main():
     for index, row in test.iterrows():
         for alg1, alg2, col in col_algs:
             #player_projs[col] = np.expm1(alg.predict(test[train_cols].loc[[index]]))
-            player_projs[col] = alg2.predict(test[train_cols].loc[[index]]) * .5 + alg2.predict(test[train_cols].loc[[index]]) * .5
+            player_projs[col] = alg1.predict(test[train_cols].loc[[index]]) * .5 + alg2.predict(test[train_cols].loc[[index]]) * .5
             if player_projs[col].values < 0:
                 player_projs[col] = 0
 
