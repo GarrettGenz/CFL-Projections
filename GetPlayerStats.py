@@ -122,9 +122,9 @@ def get_defensive_player_stats(game_id, team_id, players):
 
 # Save to database whether player was a starter or inactive
 def get_player_statuses(game_id, team_id, players):
+    # Insert data for each player that played in the game
     for player in players:
-        if player['is_starter'] or player['is_inactive']:
-            cur.execute("""INSERT INTO game_player_status("game_id", "team_id", "cfl_central_id", "is_starter",
+        cur.execute("""INSERT INTO game_player_status("game_id", "team_id", "cfl_central_id", "is_starter",
                                     "is_inactive")
                                     SELECT %s, %s, %s, %s, %s
                                     WHERE NOT EXISTS(SELECT * FROM game_player_status WHERE game_id = %s AND team_id = %s
@@ -133,10 +133,27 @@ def get_player_statuses(game_id, team_id, players):
                           player['is_starter'], player['is_inactive'],
                           str(game_id), str(team_id), str(player['cfl_central_id'])
                           )))
-            conn.commit()
+        conn.commit()
+    # Find all players who are no longer on the roster (because of IR, cut, etc...), but have played in recent games
+    # Add them as inactive since that row doesn't already exist for the game since they aren't on roster
+    cur.execute("""INSERT INTO game_player_status("game_id", "team_id", "cfl_central_id", "is_starter",
+                                        "is_inactive")
+                    SELECT DISTINCT ttd.game_id, ttd.team_id, gps.cfl_central_id, False, True
+                    FROM    game_player_status gps
+                        JOIN team_training_data ttd
+                            ON (gps.team_id = ttd.team_id AND gps.game_id < ttd.game_id AND gps.game_id >= ttd.prev_game_id)
+                    WHERE   ttd.game_id = %s
+                    AND ttd.team_id = %s
+                    AND gps.cfl_central_id NOT IN ( SELECT cfl_central_id
+                                        FROM    game_player_status
+                                        WHERE   game_id = ttd.game_id
+                                        AND team_id = ttd.team_id )""",
+                ((str(game_id), str(team_id))))
+    conn.commit()
 
-def delete_player_statuses():
-    cur.execute("""DELETE FROM game_player_status""")
+def delete_player_statuses(game_id):
+    cur.execute("""DELETE FROM game_player_status WHERE game_id = %s""",
+                (str(game_id),))
     conn.commit()
 
 # Save player stats into database
@@ -168,7 +185,7 @@ def get_roster_data(game_id, playerstats):
     team1 = team1['roster']
     team2_id = team2['team_id']
     team2 = team2['roster']
-    delete_player_statuses()
+    delete_player_statuses(game_id)
     get_player_statuses(game_id, team1_id, team1)
     get_player_statuses(game_id, team2_id, team2)
 
@@ -177,14 +194,14 @@ def main():
                 'include' : 'boxscore,rosters',
     }
 
-    game_season = config.current_year
+    game_season = config.start_year
 
-    while game_season >= config.start_year:
+    while game_season <= config.current_year:
 
         # Get list of games in season
         cur.execute("""SELECT game_id FROM games WHERE event_status = 'Final'
                         AND game_id NOT IN (SELECT game_id FROM defensive_player_stats)
-                        AND season = %s""", ((str(game_season),)))
+                        AND season = %s""", (str(game_season),))
 
         games = cur.fetchall()
 
@@ -209,7 +226,7 @@ def main():
             # Don't want to call API more than 30 times/sec
             time.sleep(5)
 
-        game_season -= 1
+        game_season += 1
 
     cur.close()
     conn.close()

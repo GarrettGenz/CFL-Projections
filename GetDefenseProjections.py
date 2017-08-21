@@ -17,13 +17,13 @@ def one_hot_encoding(cols, train, test):
     for col in cols:
         # Perform encoding on training data
         one_hot = pd.get_dummies(train[col], prefix=col)
-        if col <> 'cfl_central_id':
+        if col <> 'team_id':
             train = train.drop(col, axis=1)
         train = train.join(one_hot)
 
         # Perform encoding on test data
         one_hot = pd.get_dummies(test[col], prefix=col)
-        if col <> 'cfl_central_id':
+        if col <> 'team_id':
             test = test.drop(col, axis=1)
         test = test.join(one_hot)
 
@@ -46,28 +46,23 @@ def main():
     cur = conn.cursor()
 
     # Get training data
-    training = pd.read_sql_query("""SELECT  * FROM training_data""", conn)
+    training = pd.read_sql_query("""SELECT  * FROM training_data_def""", conn)
 
     # Get test data
-    test = pd.read_sql_query("""SELECT  * FROM test_data""", conn)
+    test = pd.read_sql_query("""SELECT  * FROM test_data_def""", conn)
 
     cur.close()
     conn.close()
 
     # Columns used only to insert data into database.
-    insert_data = ['game_id', 'cfl_central_id']
+    insert_data = ['game_id', 'team_id']
 
     # Columns we want to predict
-    targets = ['pass_net_yards', 'pass_touchdowns', 'pass_interceptions', 'rush_net_yards', 'rush_touchdowns',
-               'receive_caught', 'receive_yards', 'receive_touchdowns', 'punt_returns_yards', 'punt_returns_touchdowns',
-               'kick_returns_yards', 'kick_returns_touchdowns']
+    targets = ['sacks', 'pass_touchdowns', 'pass_interceptions', 'rush_touchdowns', 'receive_touchdowns',
+               'punt_returns_touchdowns', 'kick_returns_touchdowns']
 
     # Columns that need to be one hot encoded
-    one_hot_encode = ['team_id', 'home_or_away', 'is_starter', 'position_abbreviation', 'cfl_central_id',
-                      'percent_games_cur_season', 'num_games', 'wr_depth_num']
-
-    training['position_abbreviation'] = training['position_abbreviation'].fillna('NA')
-    test['position_abbreviation'] = test['position_abbreviation'].fillna('NA')
+    one_hot_encode = ['team_id', 'home_or_away']
 
     # Drop any rows where one hot encoded columns are null
     training = training.dropna(subset=one_hot_encode)
@@ -86,8 +81,6 @@ def main():
 
     print ('One hot encode data...')
 
-    # Remove cfl_central_id because if that category isn't in training set it will make it null
-    # in the test set
     training, test = match_categoricals(one_hot_encode, training, test)
 
     training, test = one_hot_encoding(one_hot_encode, training, test)
@@ -109,8 +102,11 @@ def main():
 
     print ('Update test NaN values to 0...')
 
+    print test[test.isnull().any(axis=1)]
+
     for col in test:
-        if col <> 'cfl_central_id':
+        # Update NaN values to 0
+        if col <> 'team_id':
             test[col].fillna(0, inplace=True)
 
     print ('Scale data...')
@@ -124,44 +120,9 @@ def main():
 
     col_algs = []
 
-    # cols_unskew_train = training[train_cols].columns[abs(training[train_cols].skew() > 1)]
-    # cols_unskew_target = training[targets].columns[abs(training[targets].skew() > 1)]
-
-    # print training[train_cols].skew()
-    # print training[targets].skew()
-
-    # for col in cols_unskew_train:
-    #    training[col] = np.log1p(training[col])
-    #    test[col] = np.log1p(test[col])
-
-    #for col in cols_unskew_target:
-    #  training[col] = np.log1p(training[col])
-
-    ##########################
-    # Check skew data
-    # print training[train_cols].skew()
-    # print training[targets].skew()
-    ############################
-
     for target in targets:
         print ('Training on ' + target + '...')
 
-        # Train model on target column
-        # Save each alg as a list of [alg, col_name_to_predict]
-        #col_algs.append([LassoCV(alphas=[1, 0.1, 0.001, 0.0005]).fit(training[train_cols], training[target]), target])
-        #col_algs.append([RandomForestRegressor().fit(training[train_cols], training[target]), target])
-
-
-        # col_algs.append([xgb.XGBRegressor(n_estimators=300, max_depth=5,learning_rate=0.05).fit(training[train_cols], training[target]),
-        #                 LassoCV(alphas=[1, 0.1, 0.001, 0.0005]).fit(training[train_cols], training[target]), target])
-
-        ##########################
-        # rf_test = RandomForestRegressor(n_jobs=-1)
-        # params = {'max_depth': [10, 20, 30], 'n_estimators': [100, 500, 900], 'max_features': [60, 80, 100]}
-        # gsCV = GridSearchCV(estimator=rf_test, param_grid=params, cv=5, n_jobs=-1, verbose=3)
-        # gsCV.fit(training[train_cols], training[target])
-        # print(gsCV.best_estimator_)
-        #
         rf_test = xgb.XGBRegressor()
         params = {'n_estimators': [10, 50, 150], 'max_depth': [5], 'learning_rate': [0.01, 0.05, 0.1]}
         gsCV = GridSearchCV(estimator=rf_test, param_grid=params, cv=4, n_jobs=-1, verbose=3)
@@ -183,26 +144,24 @@ def main():
     # Predict on each target column
     for index, row in test.iterrows():
         for alg1, alg2, col in col_algs:
-            #player_projs[col] = np.expm1(alg.predict(test[train_cols].loc[[index]]))
             player_projs[col] = alg1.predict(test[train_cols].loc[[index]]) * .5 + alg2.predict(test[train_cols].loc[[index]]) * .5
             if player_projs[col].values < 0:
                 player_projs[col] = 0
 
         # Grab data needed to insert projection into database
         player_projs["game_id"] = row['game_id']
-        player_projs["cfl_central_id"] = row['cfl_central_id']
+        player_projs["team_id"] = row['team_id']
 
-        print ('Inserting data for ' + str(row['cfl_central_id']))
+        print ('Inserting data for ' + str(row['team_id']))
 
-        cur.execute("""DELETE FROM player_projections WHERE game_id = %s AND cfl_central_id = %s""",
-                    (str(row['game_id']), str(row['cfl_central_id'])))
+        cur.execute("""DELETE FROM defense_projections WHERE game_id = %s AND team_id = %s""",
+                    (str(row['game_id']), str(row['team_id'])))
         conn.commit()
 
         cur.execute(
-            """INSERT INTO player_projections (game_id, cfl_central_id, pass_net_yards, pass_touchdowns, pass_interceptions,
-            rush_net_yards, rush_touchdowns, receive_caught, receive_yards, receive_touchdowns, punt_returns_yards,
-            punt_returns_touchdowns, kick_returns_yards, kick_returns_touchdowns)"""
-            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);",
+            """INSERT INTO defense_projections (game_id, team_id, sacks, pass_touchdowns, pass_interceptions,
+            rush_touchdowns, receive_touchdowns, punt_returns_touchdowns, kick_returns_touchdowns)"""
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);",
             player_projs.astype(np.float64).values[0, :])
         conn.commit()
 

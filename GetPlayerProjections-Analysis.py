@@ -33,7 +33,9 @@ def one_hot_encoding(cols, train, test):
 
 def match_categoricals(cols, train, test):
     for col in cols:
-        test[col] = test[col].astype("category", categories=train[col].unique(), ordered=False)
+        # Grab unique values for the column from the training and test datasets
+        test[col] = test[col].astype("category",
+                    categories=np.unique(np.concatenate((train[col].unique(), test[col].unique()))), ordered=False)
     return train, test
 
 print ('Loading Data...')
@@ -51,6 +53,7 @@ data = pd.read_sql_query("""SELECT td.*, ops.fantasy_points
 training, test = train_test_split(data)
 
 # Only include starters in the test group
+training = training[training['is_starter'] == True]
 test = test[test['is_starter'] == True]
 
 
@@ -67,7 +70,7 @@ targets = ['pass_net_yards', 'pass_touchdowns', 'pass_interceptions', 'rush_net_
 
 # Columns that need to be one hot encoded
 one_hot_encode = ['team_id', 'home_or_away', 'is_starter', 'position_abbreviation', 'cfl_central_id',
-                  'percent_games_cur_season', 'num_games']
+                      'percent_games_cur_season', 'num_games', 'wr_depth_num']
 
 training['position_abbreviation'] = training['position_abbreviation'].fillna('NA')
 test['position_abbreviation'] = test['position_abbreviation'].fillna('NA')
