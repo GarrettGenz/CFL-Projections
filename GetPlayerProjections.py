@@ -127,44 +127,9 @@ def main():
 
     col_algs = []
 
-    # cols_unskew_train = training[train_cols].columns[abs(training[train_cols].skew() > 1)]
-    # cols_unskew_target = training[targets].columns[abs(training[targets].skew() > 1)]
-
-    # print training[train_cols].skew()
-    # print training[targets].skew()
-
-    # for col in cols_unskew_train:
-    #    training[col] = np.log1p(training[col])
-    #    test[col] = np.log1p(test[col])
-
-    #for col in cols_unskew_target:
-    #  training[col] = np.log1p(training[col])
-
-    ##########################
-    # Check skew data
-    # print training[train_cols].skew()
-    # print training[targets].skew()
-    ############################
-
     for target in targets:
         print ('Training on ' + target + '...')
 
-        # Train model on target column
-        # Save each alg as a list of [alg, col_name_to_predict]
-        #col_algs.append([LassoCV(alphas=[1, 0.1, 0.001, 0.0005]).fit(training[train_cols], training[target]), target])
-        #col_algs.append([RandomForestRegressor().fit(training[train_cols], training[target]), target])
-
-
-        # col_algs.append([xgb.XGBRegressor(n_estimators=300, max_depth=5,learning_rate=0.05).fit(training[train_cols], training[target]),
-        #                 LassoCV(alphas=[1, 0.1, 0.001, 0.0005]).fit(training[train_cols], training[target]), target])
-
-        ##########################
-        # rf_test = RandomForestRegressor(n_jobs=-1)
-        # params = {'max_depth': [10, 20, 30], 'n_estimators': [100, 500, 900], 'max_features': [60, 80, 100]}
-        # gsCV = GridSearchCV(estimator=rf_test, param_grid=params, cv=5, n_jobs=-1, verbose=3)
-        # gsCV.fit(training[train_cols], training[target])
-        # print(gsCV.best_estimator_)
-        #
         rf_test = xgb.XGBRegressor()
         params = {'n_estimators': [10, 50, 150], 'max_depth': [5], 'learning_rate': [0.01, 0.05, 0.1]}
 
@@ -180,6 +145,7 @@ def main():
 
         xgb_alg = xgb.XGBRegressor()
         xgb_alg.set_params(**gsCV.best_params_)
+
         # Use best params from GridSearchCV for each target
         col_algs.append([xgb_alg.fit(training[train_cols], training[target]),
                          LassoCV(alphas=[1, 0.1, 0.001, 0.0005]).fit(training[train_cols], training[target]), target])
