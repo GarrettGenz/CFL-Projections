@@ -60,8 +60,8 @@ def daily_updates():
     conn = psycopg2.connect(host=config.endpoint, database=config.database, user=config.user, password=config.password)
     cur = conn.cursor()
 
-    #print ('Get Player Projections...')
-    #GetPlayerProjections.main()
+    print ('Get Player Projections...')
+    GetPlayerProjections.main()
 
     print ('Get Defense Projections...')
     GetDefenseProjections.main()
@@ -82,8 +82,8 @@ def daily_updates():
     conn.close()
 
 # On Sunday run all scripts (they take longer)
-#if datetime.datetime.today().weekday() == 6: # Sunday
-#    beg_of_week_updates()
+if datetime.datetime.today().weekday() == 6: # Sunday
+    beg_of_week_updates()
 
 daily_updates()
 

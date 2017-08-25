@@ -12,6 +12,8 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import train_test_split
+from sklearn.feature_selection import SelectKBest
+from sklearn.feature_selection import chi2
 
 
 def one_hot_encoding(cols, train, test):
@@ -134,8 +136,14 @@ for target in targets:
     # Train model on target column
     # Save each alg as a list of [alg, col_name_to_predict]
     rf_test = xgb.XGBRegressor()
-    params = {'n_estimators': [10, 50, 150], 'max_depth': [5], 'learning_rate': [0.01, 0.05, 0.1]}
-    gsCV = GridSearchCV(estimator=rf_test, param_grid=params, cv=4, n_jobs=-1, verbose=3)
+    print rf_test.get_params().keys()
+    params = {'n_estimators': [10, 50, 150], 'max_depth': [6], 'learning_rate': [0.01, 0.05, 0.1], 'seed': [1337]}
+
+    fit_params = {"early_stopping_rounds": 40,
+                  "eval_metric": "mae",
+                  "eval_set": [[training[train_cols], training[target]]]}
+
+    gsCV = GridSearchCV(estimator=rf_test, param_grid=params, cv=4, n_jobs=-1, verbose=3, fit_params=fit_params)
     gsCV.fit(training[train_cols], training[target])
     print(gsCV.best_estimator_)
     print(gsCV.best_params_)

@@ -128,41 +128,42 @@ AND   draftkings.game_date = CAST(games.date_start AS DATE)
 ORDER BY salary / proj_points
 LIMIT 10;
 
-/* UTIL */
+/* DEF */
 CREATE TEMP TABLE dfs_def(team_id INT, salary INT, dfs_score NUMERIC);
 
 INSERT INTO dfs_def(team_id, salary, dfs_score)
-SELECT ppp.cfl_central_id, draftkings.salary, ppp.proj_points
-FROM player_proj_points ppp JOIN draftkings
-  ON (REPLACE(lower(draftkings.name), '.', '') = REPLACE(ppp.name, '.', '') AND upper(draftkings.team) = ppp.abbreviation)
-                            JOIN games ON ppp.game_id = games.game_id
+SELECT dp.team_id, draftkings.salary, dp.proj_points
+FROM defense_projections dp JOIN teams ON dp.team_id = teams.team_id
+                            JOIN draftkings ON (TRIM(draftkings.name) = teams.nickname)
+                            JOIN games ON dp.game_id = games.game_id
 WHERE proj_points <> 0
 AND   games.event_status = 'Pre-Game'
-AND   draftkings.position IN ('RB', 'WR')
-AND   draftkings.salary < 6000
 AND   draftkings.game_date = CAST(games.date_start AS DATE)
 ORDER BY salary / proj_points
-LIMIT 10;
+LIMIT 4;
 
 CREATE TEMP TABLE combos(qb INT, rb INT, wr1 INT, wr2 INT, flex1 INT, flex2 INT, def INT);
 
 -- Temp table to hold the combination of players
-INSERT INTO combos(qb, rb, wr1, wr2, flex1, flex2)
+INSERT INTO combos(qb, rb, wr1, wr2, flex1, flex2, def)
 SELECT  dfs_qb.cfl_central_id AS "QB", dfs_rb.cfl_central_id AS "RB", wr1.cfl_central_id AS "WR1",
-    wr2.cfl_central_id AS "WR2", util1.cfl_central_id AS "Util1", util2.cfl_central_id AS "Util2"
+    wr2.cfl_central_id AS "WR2", util1.cfl_central_id AS "Util1", util2.cfl_central_id AS "Util2",
+    def.team_id AS "def"
 FROM        dfs_qb  
         join dfs_rb ON 1 = 1
         join dfs_wr wr1 ON 1 = 1
         join dfs_wr wr2 ON 1 = 1
         join dfs_util util1 ON 1 = 1
         join dfs_util util2 ON 1 = 1
-WHERE       dfs_qb.salary + dfs_rb.salary + wr1.salary + wr2.salary + util1.salary + util2.salary <= (50000 - 4900)
+        JOIN dfs_def def ON 1 = 1
+WHERE       dfs_qb.salary + dfs_rb.salary + wr1.salary + wr2.salary + util1.salary + util2.salary + def.salary <= 50000
 AND     dfs_rb.cfl_central_id NOT IN (util1.cfl_central_id, util2.cfl_central_id)
 AND     wr1.cfl_central_id NOT IN (wr2.cfl_central_id, util1.cfl_central_id, util2.cfl_central_id)
 AND     wr2.cfl_central_id NOT IN (wr1.cfl_central_id, util1.cfl_central_id, util2.cfl_central_id)
 AND     util1.cfl_central_id NOT IN (dfs_rb.cfl_central_id, wr1.cfl_central_id, wr2.cfl_central_id, util2.cfl_central_id)
 AND     util2.cfl_central_id NOT IN (dfs_rb.cfl_central_id, wr1.cfl_central_id, wr2.cfl_central_id, util1.cfl_central_id)
-ORDER BY    dfs_qb.dfs_score + dfs_rb.dfs_score + wr1.dfs_score + wr2.dfs_score + util1.dfs_score + util2.dfs_score DESC
+ORDER BY    dfs_qb.dfs_score + dfs_rb.dfs_score + wr1.dfs_score + wr2.dfs_score +
+            util1.dfs_score + util2.dfs_score + def.dfs_score DESC
 LIMIT 1;
 
 -- Delete existing combos for the upcoming week
@@ -194,10 +195,15 @@ INSERT INTO draftkings_combos(position, cfl_central_id)
 SELECT 'Flex2', flex2
 FROM  combos;
 
+INSERT INTO draftkings_combos(position, cfl_central_id)
+SELECT 'DST', def
+FROM  combos;
+
 DROP TABLE dfs_qb;
 DROP TABLE dfs_rb;
 DROP TABLE dfs_wr;
 DROP TABLE dfs_util;
+DROP TABLE dfs_def;
 DROP TABLE combos;
 
 -- Set season/week
