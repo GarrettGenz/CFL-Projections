@@ -201,7 +201,8 @@ def main():
         # Get list of games in season
         cur.execute("""SELECT game_id FROM games WHERE event_status = 'Final'
                         AND game_id NOT IN (SELECT game_id FROM defensive_player_stats)
-                        AND season = %s""", (str(game_season),))
+                        AND season = %s 
+                        ORDER BY game_id ASC""", (str(game_season),))
 
         games = cur.fetchall()
 

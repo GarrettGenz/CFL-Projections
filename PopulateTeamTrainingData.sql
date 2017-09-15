@@ -40,7 +40,7 @@ SET	prev_game_id =
 		FROM	team_training_data ttd2
 		WHERE	ttd2.team_id = ttd.team_id
 		AND 	ttd2.game_id < ttd.game_id	
-		ORDER BY ttd2.game_id DESC LIMIT 6) temp);
+		ORDER BY ttd2.game_id DESC LIMIT (SELECT config.value FROM config WHERE config.name = 'num_prev_games')) temp);
 
 --SELECT	* FROM team_training_data
 		

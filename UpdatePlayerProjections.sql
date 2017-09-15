@@ -7,8 +7,7 @@ SET     proj_points = (4 * pass_touchdowns) + (0.04 * pass_net_yards) + (-1 * pa
                       (0.1 * rush_net_yards) + (6 * rush_touchdowns) + (1 * receive_caught) +
                       (0.1 * receive_yards) +
                       (6 * receive_touchdowns) + (6 * punt_returns_touchdowns) + (6 * kick_returns_touchdowns) +
-                      (0.05 * punt_returns_yards) + (0.05 * kick_returns_yards)
-WHERE  game_id NOT IN (SELECT game_id FROM games WHERE event_status = 'Final');
+                      (0.05 * punt_returns_yards) + (0.05 * kick_returns_yards);
 
 UPDATE  player_projections
 SET     proj_points = proj_points + 3

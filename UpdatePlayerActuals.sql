@@ -1,5 +1,5 @@
-UPDATE  cfldb.public.offensive_player_stats
-SET     cfldb.public.offensive_player_stats.fantasy_points = NULL;
+UPDATE  offensive_player_stats
+SET     fantasy_points = NULL;
 
 UPDATE  offensive_player_stats
 SET     fantasy_points = (4 * COALESCE(pass_touchdowns, 0)) + (0.04 * COALESCE(pass_net_yards, 0)) +

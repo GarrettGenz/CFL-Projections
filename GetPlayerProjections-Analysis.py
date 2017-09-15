@@ -137,13 +137,14 @@ for target in targets:
     # Save each alg as a list of [alg, col_name_to_predict]
     rf_test = xgb.XGBRegressor()
     print rf_test.get_params().keys()
-    params = {'n_estimators': [10, 50, 150], 'max_depth': [6], 'learning_rate': [0.01, 0.05, 0.1], 'seed': [1337]}
+    params = {'n_estimators': [10, 50, 150], 'max_depth': [6, 15, 30], 'learning_rate': [0.01, 0.05, 0.1], 'seed': [1337]}
 
     fit_params = {"early_stopping_rounds": 40,
                   "eval_metric": "mae",
                   "eval_set": [[training[train_cols], training[target]]]}
 
-    gsCV = GridSearchCV(estimator=rf_test, param_grid=params, cv=4, n_jobs=-1, verbose=3, fit_params=fit_params)
+    gsCV = GridSearchCV(estimator=rf_test, param_grid=params, cv=4, n_jobs=-1, verbose=1, fit_params=fit_params)
+    #gsCV = GridSearchCV(estimator=rf_test, param_grid=params, cv=3, n_jobs=-1, verbose=3)
     gsCV.fit(training[train_cols], training[target])
     print(gsCV.best_estimator_)
     print(gsCV.best_params_)
@@ -174,6 +175,7 @@ for index, row in test.iterrows():
     player_projs["proj_points"] = (4 * player_projs["pass_touchdowns"]) + (0.04 * player_projs["pass_net_yards"]) + \
                         (-1 * player_projs["pass_interceptions"]) + (0.1 * player_projs["rush_net_yards"]) + \
                         (6 * player_projs["rush_touchdowns"]) + (0.1 * player_projs["receive_yards"]) + \
+                        (1 * player_projs["receive_caught"]) + \
                       (6 * player_projs["receive_touchdowns"]) + (6 * player_projs["punt_returns_touchdowns"]) + \
                       (6 * player_projs["kick_returns_touchdowns"]) + \
                       (0.05 * player_projs["punt_returns_yards"]) + (0.05 * player_projs["kick_returns_yards"])

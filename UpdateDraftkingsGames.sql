@@ -14,7 +14,3 @@ WHERE   TRIM(draftkings.name) = teams.nickname
 AND     game_date IS NULL;
 
 DELETE FROM draftkings WHERE game_date IS NULL;
-
-
-
-

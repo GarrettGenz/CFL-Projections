@@ -57,14 +57,14 @@ def beg_of_week_updates():
 
 
 def daily_updates():
-    conn = psycopg2.connect(host=config.endpoint, database=config.database, user=config.user, password=config.password)
-    cur = conn.cursor()
-
     print ('Get Player Projections...')
     GetPlayerProjections.main()
 
     print ('Get Defense Projections...')
     GetDefenseProjections.main()
+
+    conn = psycopg2.connect(host=config.endpoint, database=config.database, user=config.user, password=config.password)
+    cur = conn.cursor()
 
     print ('Update player_projections table with projected points...')
     cur.execute(codecs.open("UpdatePlayerProjections.sql", "r", encoding='us-ascii').read())
@@ -86,5 +86,4 @@ if datetime.datetime.today().weekday() == 6: # Sunday
     beg_of_week_updates()
 
 daily_updates()
-
 

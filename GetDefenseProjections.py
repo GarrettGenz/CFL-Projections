@@ -124,8 +124,13 @@ def main():
         print ('Training on ' + target + '...')
 
         rf_test = xgb.XGBRegressor()
-        params = {'n_estimators': [10, 50, 150], 'max_depth': [5], 'learning_rate': [0.01, 0.05, 0.1]}
-        gsCV = GridSearchCV(estimator=rf_test, param_grid=params, cv=4, n_jobs=-1, verbose=3)
+        params = {'n_estimators': [10, 50, 150], 'max_depth': [6, 15, 30], 'learning_rate': [0.01, 0.05, 0.1]}
+
+        fit_params = {"early_stopping_rounds": 30,
+                      "eval_metric": "mae",
+                      "eval_set": [[training[train_cols], training[target]]]}
+
+        gsCV = GridSearchCV(estimator=rf_test, param_grid=params, cv=4, n_jobs=-1, verbose=1, fit_params=fit_params)
         gsCV.fit(training[train_cols], training[target])
         print(gsCV.best_estimator_)
         print(gsCV.best_params_)

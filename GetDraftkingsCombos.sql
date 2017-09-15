@@ -162,6 +162,10 @@ AND     wr1.cfl_central_id NOT IN (wr2.cfl_central_id, util1.cfl_central_id, uti
 AND     wr2.cfl_central_id NOT IN (wr1.cfl_central_id, util1.cfl_central_id, util2.cfl_central_id)
 AND     util1.cfl_central_id NOT IN (dfs_rb.cfl_central_id, wr1.cfl_central_id, wr2.cfl_central_id, util2.cfl_central_id)
 AND     util2.cfl_central_id NOT IN (dfs_rb.cfl_central_id, wr1.cfl_central_id, wr2.cfl_central_id, util1.cfl_central_id)
+-- QB and Defense must not play each other
+AND     (SELECT ttd.opp_team_id FROM players p JOIN team_training_data ttd ON p.current_team_id = ttd.team_id
+                          JOIN upcoming_games ug ON ttd.game_id = ug.game_id
+          WHERE cfl_central_id = dfs_qb.cfl_central_id) <> def.team_id
 ORDER BY    dfs_qb.dfs_score + dfs_rb.dfs_score + wr1.dfs_score + wr2.dfs_score +
             util1.dfs_score + util2.dfs_score + def.dfs_score DESC
 LIMIT 1;
@@ -216,3 +220,5 @@ SELECT position, first_name, last_name
 FROM players JOIN draftkings_combos ON players.cfl_central_id = draftkings_combos.cfl_central_id
 WHERE   season_year = (SELECT MIN(season) FROM games WHERE event_status = 'Pre-Game')
 AND     week = (SELECT MIN(week) FROM games WHERE event_status = 'Pre-Game');
+
+--SELECT * FROM draftkings_combos WHERE week = 11
