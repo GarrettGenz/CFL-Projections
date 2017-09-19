@@ -45,8 +45,8 @@ def beg_of_week_updates():
     conn.commit()
 
     print ('Populate table player_proj_status with projected starters/injuries for current week...')
-    cur.execute(codecs.open("PopulatePlayerStatusProjections.sql", "r", encoding='us-ascii').read())
-    conn.commit()
+    #cur.execute(codecs.open("PopulatePlayerStatusProjections.sql", "r", encoding='us-ascii').read())
+    #conn.commit()
 
     print ('Populate table team_training_data...')
     cur.execute(codecs.open("PopulateTeamTrainingData.sql", "r", encoding='us-ascii').read())
@@ -82,8 +82,8 @@ def daily_updates():
     conn.close()
 
 # On Sunday run all scripts (they take longer)
-if datetime.datetime.today().weekday() == 6: # Sunday
-    beg_of_week_updates()
+#if datetime.datetime.today().weekday() == 6: # Sunday
+beg_of_week_updates()
 
-daily_updates()
+#daily_updates()
 

@@ -138,10 +138,10 @@ def get_player_statuses(game_id, team_id, players):
     # Add them as inactive since that row doesn't already exist for the game since they aren't on roster
     cur.execute("""INSERT INTO game_player_status("game_id", "team_id", "cfl_central_id", "is_starter",
                                         "is_inactive")
-                    SELECT DISTINCT ttd.game_id, ttd.team_id, gps.cfl_central_id, False, True
-                    FROM    game_player_status gps
+                    SELECT DISTINCT ttd.game_id, ttd.team_id, ops.cfl_central_id, False, True
+                    FROM    offensive_player_stats ops
                         JOIN team_training_data ttd
-                            ON (gps.team_id = ttd.team_id AND gps.game_id < ttd.game_id AND gps.game_id >= ttd.prev_game_id)
+                            ON (ops.team_id = ttd.team_id AND ops.game_id < ttd.game_id AND ops.game_id >= ttd.prev_game_id)
                     WHERE   ttd.game_id = %s
                     AND ttd.team_id = %s
                     AND gps.cfl_central_id NOT IN ( SELECT cfl_central_id
