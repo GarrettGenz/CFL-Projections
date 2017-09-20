@@ -144,7 +144,7 @@ def get_player_statuses(game_id, team_id, players):
                             ON (ops.team_id = ttd.team_id AND ops.game_id < ttd.game_id AND ops.game_id >= ttd.prev_game_id)
                     WHERE   ttd.game_id = %s
                     AND ttd.team_id = %s
-                    AND gps.cfl_central_id NOT IN ( SELECT cfl_central_id
+                    AND ops.cfl_central_id NOT IN ( SELECT cfl_central_id
                                         FROM    game_player_status
                                         WHERE   game_id = ttd.game_id
                                         AND team_id = ttd.team_id )""",

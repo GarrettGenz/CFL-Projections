@@ -17,17 +17,17 @@ def beg_of_week_updates():
     conn = psycopg2.connect(host=config.endpoint, database=config.database, user=config.user, password=config.password)
     cur = conn.cursor()
 
-    print ('Get Teams...')
-    GetTeams.main()
-
-    print ('Get Players...')
-    GetPlayers.main()
-
-    print ('Get Games...')
-    GetGames.main()
-
-    print ('Update Games...')
-    UpdateGames.main()
+    # print ('Get Teams...')
+    # GetTeams.main()
+    #
+    # print ('Get Players...')
+    # GetPlayers.main()
+    #
+    # print ('Get Games...')
+    # GetGames.main()
+    #
+    # print ('Update Games...')
+    # UpdateGames.main()
 
     print ('Get Player Stats...')
     GetPlayerStats.main()
@@ -45,8 +45,8 @@ def beg_of_week_updates():
     conn.commit()
 
     print ('Populate table player_proj_status with projected starters/injuries for current week...')
-    #cur.execute(codecs.open("PopulatePlayerStatusProjections.sql", "r", encoding='us-ascii').read())
-    #conn.commit()
+    cur.execute(codecs.open("PopulatePlayerStatusProjections.sql", "r", encoding='us-ascii').read())
+    conn.commit()
 
     print ('Populate table team_training_data...')
     cur.execute(codecs.open("PopulateTeamTrainingData.sql", "r", encoding='us-ascii').read())
@@ -85,5 +85,5 @@ def daily_updates():
 #if datetime.datetime.today().weekday() == 6: # Sunday
 beg_of_week_updates()
 
-#daily_updates()
+daily_updates()
 
