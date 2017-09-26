@@ -221,4 +221,4 @@ FROM players JOIN draftkings_combos ON players.cfl_central_id = draftkings_combo
 WHERE   season_year = (SELECT MIN(season) FROM games WHERE event_status = 'Pre-Game')
 AND     week = (SELECT MIN(week) FROM games WHERE event_status = 'Pre-Game');
 
---SELECT * FROM draftkings_combos WHERE week = 11
+--SELECT * FROM draftkings_combos WHERE week = 15
