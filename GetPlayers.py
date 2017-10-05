@@ -72,6 +72,12 @@ def main():
     last_page = False
     retry_count = 0
 
+    # Delete existing players
+    conn = psycopg2.connect(host=config.endpoint, database=config.database, user=config.user, password=config.password)
+    cur = conn.cursor()
+    cur.execute("""DELETE FROM players""")
+    conn.commit()
+
     while not last_page:
 
         # Make request
