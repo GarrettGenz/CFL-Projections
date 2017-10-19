@@ -8,9 +8,9 @@ import config
 from sklearn.linear_model import LassoCV
 from sklearn.preprocessing import StandardScaler
 
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import GridSearchCV
+import pickle
+import os
 
 
 def one_hot_encoding(cols, train, test):
@@ -130,15 +130,32 @@ def main():
                       "eval_metric": "mae",
                       "eval_set": [[training[train_cols], training[target]]]}
 
-        gsCV = GridSearchCV(estimator=rf_test, param_grid=params, cv=4, n_jobs=-1, verbose=1, fit_params=fit_params)
-        gsCV.fit(training[train_cols], training[target])
-        print(gsCV.best_estimator_)
-        print(gsCV.best_params_)
+        # Get directory of current file
+        dir = os.path.dirname(__file__)
 
-        xgb_alg = xgb.XGBRegressor()
-        xgb_alg.set_params(**gsCV.best_params_)
+        # Get path to the model file
+        file_path = 'models/defense/' + target + '.dat'
+
+        # If the file already exists load it. Otherwise generate it
+        if os.path.exists(os.path.join(dir, file_path)):
+            xgb_alg = pickle.load(open(file_path, "rb"))
+        else:
+            gsCV = GridSearchCV(estimator=rf_test, param_grid=params, cv=4, n_jobs=-1, verbose=1, fit_params=fit_params)
+            gsCV.fit(training[train_cols], training[target])
+            print(gsCV.best_estimator_)
+            print(gsCV.best_params_)
+
+            xgb_alg = xgb.XGBRegressor()
+            xgb_alg.set_params(**gsCV.best_params_)
+
+            # Train model on training data
+            xgb_alg.fit(training[train_cols], training[target])
+
+            # Save model to file for the next run
+            pickle.dump(xgb_alg, open(file_path, "wb"))
+
         # Use best params from GridSearchCV for each target
-        col_algs.append([xgb_alg.fit(training[train_cols], training[target]),
+        col_algs.append([xgb_alg,
                          LassoCV(alphas=[1, 0.1, 0.001, 0.0005]).fit(training[train_cols], training[target]), target])
 
     conn = psycopg2.connect(host=config.endpoint, database=config.database, user=config.user,

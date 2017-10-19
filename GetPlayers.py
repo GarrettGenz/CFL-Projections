@@ -66,17 +66,11 @@ def main():
                 'filter[position_id][lt]' : '10',
                 'sort' : 'last_name',
                 'page[number]' : 1,
-                'page[size]' : 20
+                'page[size]' : 30
     }
 
     last_page = False
     retry_count = 0
-
-    # Delete existing players
-    conn = psycopg2.connect(host=config.endpoint, database=config.database, user=config.user, password=config.password)
-    cur = conn.cursor()
-    cur.execute("""DELETE FROM players""")
-    conn.commit()
 
     while not last_page:
 
@@ -96,7 +90,7 @@ def main():
             params['page[number]'] += 1
 
         # If 0 players are returned, exit the loop
-        elif retry_count > 2:
+        elif retry_count > 4:
             last_page = True
 
         else:

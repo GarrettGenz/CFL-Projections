@@ -80,8 +80,8 @@ def daily_updates():
     conn.close()
 
 # On Sunday run all scripts (they take longer)
-if datetime.datetime.today().weekday() == 6: # Sunday
-    beg_of_week_updates()
+# if datetime.datetime.today().weekday() == 6: # Sunday
+#beg_of_week_updates()
 
 daily_updates()
 
